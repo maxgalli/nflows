@@ -16,8 +16,9 @@ class NoMeanException(Exception):
 class Distribution(nn.Module):
     """Base class for all distribution objects."""
 
-    def forward(self, *args):
-        raise RuntimeError("Forward method cannot be called for a Distribution object.")
+    def forward(self, inputs, context=None):
+        # raise RuntimeError("Forward method cannot be called for a Distribution object.")
+        return self.log_prob(inputs, context)
 
     def log_prob(self, inputs, context=None):
         """Calculate log probability under the distribution.

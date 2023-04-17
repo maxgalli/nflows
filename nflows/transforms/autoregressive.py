@@ -73,6 +73,7 @@ class MaskedAffineAutoregressiveTransform(AutoregressiveTransform):
         activation=F.relu,
         dropout_probability=0.0,
         use_batch_norm=False,
+        init_identity=True,
     ):
         self.features = features
         made = made_module.MADE(
@@ -88,6 +89,12 @@ class MaskedAffineAutoregressiveTransform(AutoregressiveTransform):
             use_batch_norm=use_batch_norm,
         )
         self._epsilon = 1e-3
+        self.init_identity = init_identity
+        if init_identity:
+            torch.nn.init.constant_(made.final_layer.weight, 0.0)
+            torch.nn.init.constant_(
+                made.final_layer.bias, 0.5414  # the value k to get softplus(k) = 1.0
+            )
         super(MaskedAffineAutoregressiveTransform, self).__init__(made)
 
     def _output_dim_multiplier(self):
@@ -125,6 +132,8 @@ class MaskedAffineAutoregressiveTransform(AutoregressiveTransform):
         )
         unconstrained_scale = autoregressive_params[..., 0]
         shift = autoregressive_params[..., 1]
+        if self.init_identity:
+            shift = shift - 0.5414
         return unconstrained_scale, shift
 
 
@@ -416,6 +425,7 @@ class MaskedPiecewiseRationalQuadraticAutoregressiveTransform(AutoregressiveTran
         activation=F.relu,
         dropout_probability=0.0,
         use_batch_norm=False,
+        init_identity=True,
         min_bin_width=rational_quadratic.DEFAULT_MIN_BIN_WIDTH,
         min_bin_height=rational_quadratic.DEFAULT_MIN_BIN_HEIGHT,
         min_derivative=rational_quadratic.DEFAULT_MIN_DERIVATIVE,
@@ -439,6 +449,13 @@ class MaskedPiecewiseRationalQuadraticAutoregressiveTransform(AutoregressiveTran
             dropout_probability=dropout_probability,
             use_batch_norm=use_batch_norm,
         )
+
+        if init_identity:
+            torch.nn.init.constant_(autoregressive_net.final_layer.weight, 0.0)
+            torch.nn.init.constant_(
+                autoregressive_net.final_layer.bias,
+                np.log(np.exp(1 - min_derivative) - 1),
+            )
 
         super().__init__(autoregressive_net)
 
