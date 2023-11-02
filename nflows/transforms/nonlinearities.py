@@ -30,6 +30,26 @@ class Tanh(Transform):
         logabsdet = torchutils.sum_except_batch(logabsdet, num_batch_dims=1)
         return outputs, logabsdet
 
+class IntervalToReals(Transform):
+    def __init__(self,left,right):
+        super().__init__()
+        self.left = left
+        self.right = right
+        self.width = right-left
+        
+    def forward(self,inputs,context=None):
+        outputs = (inputs-self.left)/self.width
+        outputs = torch.erfinv(2.0*outputs-1.0)*np.sqrt(2.0)
+        logabsdet = 0.5*outputs**2 + 0.5*np.log(2*np.pi) - np.log(self.width)
+        logabsdet = torchutils.sum_except_batch(logabsdet,num_batch_dims=1)
+        return outputs, logabsdet
+    
+    def inverse(self,inputs,context=None):
+        outputs = 0.5*torch.erf(inputs/np.sqrt(2.0)) + 0.5
+        outputs = self.width*outputs + self.left
+        logabsdet = -0.5*inputs**2 - 0.5*np.log(2*np.pi) + np.log(self.width)
+        logabsdet = torchutils.sum_except_batch(logabsdet,num_batch_dims=1)
+        return outputs, logabsdet
 
 class LogTanh(Transform):
     """Tanh with unbounded output. 

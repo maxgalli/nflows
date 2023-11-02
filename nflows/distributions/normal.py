@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 from torch import nn
+from torch.distributions import MultivariateNormal, Exponential
 
 from nflows.distributions.base import Distribution
 from nflows.utils import torchutils
@@ -42,6 +43,40 @@ class StandardNormal(Distribution):
         else:
             # The value of the context is ignored, only its size is taken into account.
             return torch.zeros(context.shape[0], *self._shape)
+        
+class FullNormal(Distribution):
+    """A multivariate Normal with user-specified mean and unit covariance."""
+
+    def __init__(self, mean, cov):
+        super().__init__()
+        self.mean = mean
+        self.cov = cov
+        self.dist = MultivariateNormal(mean,covariance_matrix=cov)
+
+    def _log_prob(self, inputs, context):
+        return self.dist.log_prob(inputs)
+
+    def _sample(self, num_samples, context):
+        return self.dist.sample((num_samples,))
+
+    def _mean(self, context):
+        return self.mean
+    
+class Exp(Distribution):
+    """A multivariate Normal with user-specified mean and unit covariance."""
+
+    def __init__(self, shape):
+        super().__init__()
+        self.dist = Exponential(torch.ones(shape,dtype=torch.float32))
+
+    def _log_prob(self, inputs, context):
+        return self.dist.log_prob(inputs)
+
+    def _sample(self, num_samples, context):
+        return self.dist.sample((num_samples,))
+
+    def _mean(self, context):
+        return self.mean
 
 
 class ConditionalDiagonalNormal(Distribution):
